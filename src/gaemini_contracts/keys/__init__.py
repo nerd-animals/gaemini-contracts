@@ -1,12 +1,12 @@
-"""File path helpers for cross-repo data files.
+"""Cross-repo 데이터 파일을 위한 경로 helper들.
 
-Producers (writers) and consumers (readers) both call these helpers, so the
-on-disk layout stays in sync — no raw f-strings sprinkled around the codebase.
+쓰는 쪽(producer)과 읽는 쪽(consumer) 모두 이 helper를 호출하므로,
+디스크 레이아웃이 코드 곳곳에 흩어진 f-string 으로 갈라지지 않는다.
 
-Coverage
-    OHLCV Parquet  — ``parquet_path``, ``parquet_market_dir``, ``parquet_ticker_dir``
-    Application logs — ``log_path``, ``log_instance_dir``, ``log_strategy_dir``
-    Trade logs       — ``trade_log_path``, ``trades_dir``
+커버 범위
+    OHLCV Parquet     — ``parquet_path``, ``parquet_market_dir``, ``parquet_ticker_dir``
+    애플리케이션 로그  — ``log_path``, ``log_instance_dir``, ``log_strategy_dir``
+    거래 이력         — ``trade_log_path``, ``trades_dir``
 """
 from gaemini_contracts.keys.log_path import (
     log_instance_dir,

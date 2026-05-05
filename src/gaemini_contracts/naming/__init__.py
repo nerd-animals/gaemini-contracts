@@ -1,10 +1,10 @@
-"""Instance name validation.
+"""instance 이름 검증.
 
-An instance is one running gaemini-core process (e.g. ``paper-crypto``,
-``live-crypto``). The name appears in Redis prefixes, log paths, and
-dashboard URLs, so it must be filesystem- and URL-safe.
+instance란 실행 중인 gaemini-core 프로세스 한 벌의 이름이다
+(예: ``paper-crypto``, ``live-crypto``). 이 이름이 Redis prefix, 로그 경로,
+대시보드 URL에 그대로 박히므로 파일시스템에서도 URL에서도 안전해야 한다.
 
-See :mod:`gaemini_contracts.naming.instance` for the rule and examples.
+규칙과 예시는 :mod:`gaemini_contracts.naming.instance` 참조.
 """
 from gaemini_contracts.naming.instance import (
     INSTANCE_NAME_PATTERN,

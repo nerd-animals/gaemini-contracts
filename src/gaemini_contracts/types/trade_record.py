@@ -1,28 +1,38 @@
-"""TradeRecord — one trade fill event, JSONL append-only.
+"""TradeRecord — 체결(또는 체결 시도) 이벤트 한 건. JSONL append-only.
 
-Producer
-    gaemini-core. Appends one line each time the broker returns a fill
-    result (or a final non-filled status such as "cancelled").
+생산자 (Producer)
+    gaemini-core. 거래소가 응답을 줄 때마다 한 줄을 append한다.
+    체결이 성공한 경우뿐 아니라 "실패", "취소"도 한 줄로 남는다.
 
-Consumer
-    gaemini-view (trades view). Parses each line via
-    ``parse_versioned_json(line, TRADE_RECORD_VERSION, "TradeRecord")``.
+소비자 (Consumer)
+    gaemini-view (거래 이력 화면). 한 줄씩 다음 함수로 파싱한다::
 
-File path (see ``keys/trade_log_path.py``)
+        parse_versioned_json(line, TRADE_RECORD_VERSION, "TradeRecord")
+
+파일 경로 (``keys/trade_log_path.py`` 참조)
     ``{log_root}/{instance}/{strategy}/trades/{date}.jsonl``
-    The path encodes ``(instance, strategy)`` — those fields are NOT in
-    the record itself, to keep lines small.
+    경로에 (instance, strategy)가 이미 박혀 있으므로 레코드 안에는
+    중복으로 넣지 않는다.
 
-Source of truth
-    This file replaces the legacy ``AccountState.orders_history`` list.
-    Trade history lives only here; the file is the truth source.
+진실 공급원 (source of truth)
+    이 파일이 거래 이력의 정본이다. 과거에 ``AccountState.orders_history``
+    리스트로 들고 있던 정보를 이 파일이 대체한다.
 
-Write order (recommended)
-    1. Append the TradeRecord line to the JSONL file.
-    2. Update Redis ``AccountState`` (cash, positions).
-    File first → if Redis update fails, the trade is still recoverable.
+쓰기 순서 (권장)
+    1) 이 JSONL 파일에 한 줄 append.
+    2) Redis ``AccountState`` 갱신 (현금/포지션 반영).
+    파일 → Redis 순서이므로, Redis 갱신이 실패해도 파일에서 복구 가능하다.
 
-Example line::
+용어
+    체결 (fill)        : 주문이 거래소에서 실제로 매수/매도 성사된 것.
+    부분 체결 (partial) : 주문 수량 중 일부만 체결되고 나머지는 대기/취소된 상태.
+    base-asset         : 거래쌍에서 사고팔리는 자산. KRW-BTC면 BTC가 base.
+    quote-asset        : 그 자산을 가격 매기는 통화. KRW-BTC면 KRW가 quote.
+    수수료 (fee)        : 거래소에 지불하는 비용. quote-asset 단위.
+    티커 (ticker)       : 종목 식별 문자열. 시장마다 형식이 다르다.
+                         예) crypto: "KRW-BTC", "USDT-ETH" / KRX: "005930"
+
+예시 줄::
 
     {"schema_version": 1, "ts": "2026-05-03T08:01:31+00:00",
      "order_id": "o-42", "ticker": "KRW-BTC", "side": "buy",
@@ -33,47 +43,45 @@ from __future__ import annotations
 
 from typing import Literal, TypedDict
 
-# Bump on any breaking change to TradeRecord (renamed / removed field,
-# narrowed type). Readers reject lines whose schema_version does not match.
+# TradeRecord 형태가 깨지는 변경이 있을 때마다 1씩 올린다.
+# 읽는 쪽은 schema_version이 이 값과 다르면 줄을 거부한다.
 TRADE_RECORD_VERSION = 1
 
 
 class TradeRecord(TypedDict):
     schema_version: int
 
-    # UTC timestamp of the broker's response. ISO 8601.
-    # e.g. "2026-05-03T08:01:31+00:00"
+    # 거래소 응답 시각. UTC ISO 8601.
+    # 예) "2026-05-03T08:01:31+00:00"
     ts: str
 
-    # Broker-issued order ID. Unique within the broker; opaque to us.
+    # 거래소가 발급한 주문 ID. 거래소 안에서만 unique. 의미는 들여다보지 않는다.
     order_id: str
 
-    # Trading pair / instrument symbol. Format follows the market.
-    #   crypto: "KRW-BTC", "USDT-ETH"
-    #   KRX:    "005930"
+    # 종목 식별자. 시장 형식에 따른다 (위 "용어" 참조).
     ticker: str
 
-    # Trade direction. ("hold" is a strategy-level concept and never appears
-    # in a trade record — only filled or attempted orders are logged.)
+    # 매수/매도 방향. ("hold"는 전략 단계 개념이고 거래 기록에는 등장하지 않는다.)
     side: Literal["buy", "sell"]
 
-    # Amount filled in this event, in BASE-asset units (not cash).
-    # Always >= 0. For partial fills, carries only the chunk that filled now;
-    # the remainder may produce additional TradeRecords or a "cancelled" one.
+    # 이 이벤트로 체결된 수량. base-asset 단위(현금이 아님).
+    # 항상 0 이상. 부분 체결인 경우 이번에 체결된 분량만 들어가고,
+    # 나머지는 추가 TradeRecord(또는 "cancelled" 레코드)로 따라온다.
     filled_amount: float
 
-    # Average fill price per base-asset unit, in QUOTE-asset units.
-    # 0.0 when status is "failed" or "cancelled" (no fill happened).
+    # 이 이벤트의 체결 평균 단가. base-asset 한 단위당 quote-asset 가격.
+    # status가 "failed" 또는 "cancelled"라 체결이 없었다면 0.0.
     filled_price: float
 
-    # Fee paid to the broker for this fill event, in QUOTE-asset units.
+    # 이번 체결 이벤트에 대해 거래소에 낸 수수료. quote-asset 단위.
     fee: float
 
-    # Outcome of this event. One TradeRecord = one event, not one order's
-    # whole lifetime — a partially-filled-then-cancelled order produces
-    # two records (a "partial" then a "cancelled").
-    #   "filled"    — fully filled by this event.
-    #   "partial"   — partial fill; more events may follow.
-    #   "failed"    — broker rejected (insufficient balance, invalid order, …).
-    #   "cancelled" — cancelled before any further fill.
+    # 이 이벤트의 결과. "주문 한 건의 전체 라이프사이클"이 아니라
+    # "이번 한 이벤트"의 결과만 담는다.
+    # 따라서 부분 체결 후 잔량 취소된 주문은 두 줄로 기록된다
+    # ("partial" 한 줄 + "cancelled" 한 줄).
+    #   "filled"    — 이번 이벤트로 전량 체결.
+    #   "partial"   — 부분 체결. 이후 추가 이벤트가 더 있을 수 있음.
+    #   "failed"    — 거래소 거절 (잔고 부족, 잘못된 주문 등).
+    #   "cancelled" — 추가 체결 없이 취소됨.
     status: Literal["filled", "partial", "failed", "cancelled"]

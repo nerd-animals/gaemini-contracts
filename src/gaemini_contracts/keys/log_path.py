@@ -1,21 +1,25 @@
-"""Application log file path layout (LogRecord JSONL).
+"""애플리케이션 로그(JSONL) 파일의 경로 레이아웃.
 
-Producer
-    gaemini-core (StrategyLogger). Appends one line per log call.
+생산자 (Producer)
+    gaemini-core (StrategyLogger). 로그 한 건당 한 줄 append.
 
-Consumer
-    gaemini-view (logs view).
+소비자 (Consumer)
+    gaemini-view (로그 화면).
 
-Canonical layout
+표준 레이아웃
     ``{log_root}/{instance}/{strategy}/{date}.jsonl``
 
-Example
+예시
     >>> log_path(Path("/var/log/gaemini"), "paper-crypto", "momentum",
     ...          date(2026, 5, 3))
     PosixPath('/var/log/gaemini/paper-crypto/momentum/2026-05-03.jsonl')
 
-``instance`` is validated against the rule in ``naming/instance.py`` —
-malformed names raise ``InvalidInstanceName`` before any path is built.
+``instance`` 인자는 ``naming/instance.py``의 규칙으로 검증된다.
+잘못된 이름이면 경로 생성 전에 ``InvalidInstanceName``이 발생한다.
+
+용어
+    instance : 실행 중인 gaemini-core 프로세스 한 벌의 이름. 예) "paper-crypto".
+    strategy : 그 instance 안에 등록된 전략 이름.            예) "momentum".
 """
 from __future__ import annotations
 
@@ -31,19 +35,19 @@ def log_path(
     strategy: str,
     day: Date,
 ) -> Path:
-    """Path to the daily JSONL log file for one (instance, strategy)."""
+    """(instance, strategy, day) 조합의 일자별 JSONL 로그 파일 경로."""
     validate_instance_name(instance)
     return log_root / instance / strategy / f"{day.isoformat()}.jsonl"
 
 
 def log_instance_dir(log_root: Path, instance: str) -> Path:
-    """Root directory for all strategies of one instance."""
+    """한 instance에 속한 모든 strategy 디렉토리의 부모."""
     validate_instance_name(instance)
     return log_root / instance
 
 
 def log_strategy_dir(log_root: Path, instance: str, strategy: str) -> Path:
-    """Directory holding daily log files (and the ``trades/`` subdir) for
-    one strategy."""
+    """한 (instance, strategy)의 일자별 로그 파일과 ``trades/`` 서브디렉토리가
+    모이는 디렉토리."""
     validate_instance_name(instance)
     return log_root / instance / strategy

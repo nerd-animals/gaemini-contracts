@@ -1,25 +1,31 @@
-"""Trade log file path layout (TradeRecord JSONL).
+"""거래 이력(JSONL) 파일의 경로 레이아웃.
 
-Producer
-    gaemini-core. Appends one line per trade fill event.
+한 줄 = 한 체결(또는 체결 시도) 이벤트 = 한 TradeRecord.
 
-Consumer
-    gaemini-view (trades view).
+생산자 (Producer)
+    gaemini-core. 체결/시도 이벤트가 있을 때마다 한 줄 append.
 
-Canonical layout
+소비자 (Consumer)
+    gaemini-view (거래 이력 화면).
+
+표준 레이아웃
     ``{log_root}/{instance}/{strategy}/trades/{date}.jsonl``
 
-The trade log lives under each strategy's log directory in a dedicated
-``trades/`` subfolder, so application logs and trade logs share the same
-``{log_root}/{instance}/{strategy}/`` root and rotate by date.
+거래 이력 파일은 일반 로그 디렉토리 안의 ``trades/`` 서브폴더에 자리한다.
+즉 같은 (instance, strategy) 묶음 아래 일반 로그와 거래 로그가 함께 모이고,
+둘 다 일자 기준으로 회전한다.
 
-Example
+예시
     >>> trade_log_path(Path("/var/log/gaemini"), "paper-crypto", "momentum",
     ...                date(2026, 5, 3))
     PosixPath('/var/log/gaemini/paper-crypto/momentum/trades/2026-05-03.jsonl')
 
-This file is the source of truth for trade history (replaces the legacy
-``AccountState.orders_history`` list).
+이 파일이 거래 이력의 정본이다 (과거 ``AccountState.orders_history`` 대체).
+
+용어
+    instance : 실행 중인 gaemini-core 프로세스 이름.
+    strategy : 그 instance 안의 전략 이름.
+    체결    : 주문이 거래소에서 실제로 매수/매도 성사된 것.
 """
 from __future__ import annotations
 
@@ -35,12 +41,12 @@ def trade_log_path(
     strategy: str,
     day: Date,
 ) -> Path:
-    """Path to the daily trade JSONL file for one (instance, strategy)."""
+    """(instance, strategy, day) 조합의 일자별 거래 이력 JSONL 경로."""
     validate_instance_name(instance)
     return log_root / instance / strategy / "trades" / f"{day.isoformat()}.jsonl"
 
 
 def trades_dir(log_root: Path, instance: str, strategy: str) -> Path:
-    """Directory holding all daily trade JSONL files for one strategy."""
+    """한 (instance, strategy)의 모든 일자별 거래 이력 파일이 모이는 디렉토리."""
     validate_instance_name(instance)
     return log_root / instance / strategy / "trades"
