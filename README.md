@@ -81,7 +81,11 @@ from gaemini_contracts.types import (
 )
 from gaemini_contracts.versioning import dump_versioned_json
 
-# Validate user-supplied config once, up front.
+# Path helpers (log_path, trade_log_path, ...) validate the instance name
+# internally, so a bad name can never produce a file path. Calling
+# validate_instance_name once at config load is still useful: it fails
+# fast at startup with a clear "your config is wrong" message, instead of
+# crashing on the first log write much later.
 def load_config(raw: dict) -> dict:
     validate_instance_name(raw["instance"])  # raises InvalidInstanceName on bad name
     return raw
