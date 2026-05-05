@@ -1,12 +1,31 @@
-"""Generic boundary validator — version check + JSON parse.
+"""Schema version boundary validators (B6).
 
-Concrete persisted types (AccountState, StrategySpec, StrategyMeta, LogRecord)
-define their own VERSION constant in their own module and delegate to the
-helpers below. This keeps the validator module type-agnostic and avoids
-circular imports.
+Every persisted JSON record (LogRecord, TradeRecord, …) carries
+``schema_version: int`` at the top level. Readers check that field on the
+boundary and fail fast on mismatch — *silent corruption is more dangerous
+than a loud failure*.
 
-B6: every cross-process boundary is fail-fast on schema_version mismatch.
-Silent corruption is more dangerous than a loud failure.
+Each concrete record type owns its own ``*_VERSION`` constant in its own
+module and delegates serialization to the helpers below. This module is
+intentionally type-agnostic so new record types can adopt versioning
+without touching it.
+
+Usage
+    Read::
+
+        line = file.readline().rstrip()
+        record = parse_versioned_json(line, LOG_RECORD_VERSION, "LogRecord")
+        # record is a dict; cast to the relevant TypedDict at the call site.
+
+    Write::
+
+        line = dump_versioned_json(dict(record), LOG_RECORD_VERSION, "LogRecord")
+        file.write(line + "\\n")
+
+When a reader sees ``SchemaIncompatible``
+    Either bump ``gaemini-contracts`` in the consuming repo, or migrate the
+    on-disk data to the current version. The exception message names which
+    record type was mismatched and which versions were involved.
 """
 from __future__ import annotations
 
@@ -15,9 +34,10 @@ from typing import Any
 
 
 class SchemaIncompatible(ValueError):
-    """Raised when a payload's schema_version does not match what the reader expects.
+    """Raised when a payload's ``schema_version`` does not match the reader's
+    expected version.
 
-    Operator action: bump gaemini-contracts in the consuming repo, or run a
+    Operator action: bump ``gaemini-contracts`` in this consumer, or run a
     migration on the data, or both.
     """
 
@@ -27,7 +47,8 @@ def parse_versioned_json(
     expected_version: int,
     schema_name: str,
 ) -> dict[str, Any]:
-    """Parse JSON, ensure top-level schema_version field matches, return dict.
+    """Parse ``raw`` as JSON, ensure its top-level ``schema_version`` matches
+    ``expected_version``, and return the resulting dict.
 
     Concrete callers cast the returned dict to their TypedDict / dataclass.
     """
@@ -51,7 +72,11 @@ def dump_versioned_json(
     expected_version: int,
     schema_name: str,
 ) -> str:
-    """Ensure schema_version is correct, then JSON-dump."""
+    """Verify ``payload['schema_version'] == expected_version``, then JSON-dump.
+
+    Refuses to serialize a record whose schema_version is missing or wrong —
+    that would silently produce an unreadable file.
+    """
     actual = payload.get("schema_version")
     if actual != expected_version:
         raise SchemaIncompatible(
