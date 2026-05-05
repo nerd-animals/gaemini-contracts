@@ -1,52 +1,63 @@
 # gaemini-contracts
 
-Cross-process schema, key, and protocol contracts shared by `gaemini-data`, `gaemini-core`, and `gaemini-view`.
+File-format and path contracts shared by `gaemini-data`, `gaemini-core`, and `gaemini-view`.
 
-This package is the single source of truth for:
+This package owns the **append-only file** boundaries between repos:
 
-- TypedDict / dataclass schemas of every persisted payload (Redis values, JSONL records).
-- Protocol definitions for cross-process boundaries (`OrderManagerProtocol`, `RedisProtocol`, `RealAccountProtocol`).
-- Redis key formation helpers — instance-prefixed, `(instance, strategy)` tuple aware.
-- Parquet path / column schema helpers.
-- Instance name validation (B1 regex).
-- Schema version constants and boundary validators (B6 fail-fast).
+- OHLCV Parquet — columns, KST partition policy, path layout
+- Application logs — `LogRecord` JSONL + path layout
+- Trade logs — `TradeRecord` JSONL + path layout
+- Instance name validation (B1)
+- Schema version boundary validators (B6 fail-fast)
 
-**No pandas dependency.** `DataBundle` and other pandas-bearing types live in `gaemini-core`. `BaseStrategy` references `DataBundle` via `TYPE_CHECKING` gate so runtime stays pandas-free.
+Mutable live state (`AccountState`, `StrategySpec`, `StrategyMeta`, etc.) is
+owned by `gaemini-core` and exposed to `gaemini-view` via Core's HTTP API.
+It is **not** a cross-repo contract.
+
+## Architectural principles
+
+- **누적 / append-only → 파일** (cross-repo via this package)
+  - OHLCV (data writes, core/view read)
+  - LogRecord (core writes, view reads)
+  - TradeRecord (core writes, view reads)
+- **최신 상태 / mutable snapshot → Core HTTP API**
+  - View never touches Core's Redis directly.
+
+No runtime dependencies (no `pandas`, no `redis`).
 
 ## Install (consumer)
 
 ```toml
-# consumer's pyproject.toml
 [project]
 dependencies = [
-    "gaemini-contracts @ git+https://github.com/nerd-animals/gaemini-contracts.git@v0.1.0",
+    "gaemini-contracts @ git+https://github.com/nerd-animals/gaemini-contracts.git@v0.2.0",
 ]
 ```
 
 ## Public API
 
 ```python
-from gaemini_contracts import BaseStrategy
-from gaemini_contracts.types import (
-    AccountState, PositionData,
-    OrderResultData, NetOrderData,
-    OutputType, SignalData, TargetPortfolioData,
-    StrategySpec, StrategyMeta,
+from gaemini_contracts import (
+    LogRecord, LOG_RECORD_VERSION,
+    TradeRecord, TRADE_RECORD_VERSION,
 )
-from gaemini_contracts.protocols import (
-    OrderManagerProtocol, RedisProtocol, RealAccountProtocol,
+from gaemini_contracts.schema import (
+    OHLCV_COLUMNS, PARTITION_TIMEZONE, PARTITION_GRANULARITY, MINUTE_SYMBOL_SUFFIX,
 )
 from gaemini_contracts.keys import (
-    strategy_account_key, strategy_ctx_key, strategy_spec_key,
-    strategy_status_key, strategy_meta_key,
-    parquet_path, log_path,
+    parquet_path, parquet_market_dir, parquet_ticker_dir,
+    log_path, log_instance_dir, log_strategy_dir,
+    trade_log_path, trades_dir,
 )
-from gaemini_contracts.naming import validate_instance_name
-from gaemini_contracts.versioning import SchemaIncompatible
+from gaemini_contracts.naming import validate_instance_name, INSTANCE_NAME_PATTERN
+from gaemini_contracts.versioning import (
+    parse_versioned_json, dump_versioned_json, SchemaIncompatible,
+)
 ```
 
 ## Versioning policy
 
-Semantic. Breaking changes in a major bump. All consumers must bump together — see ADR-021 in `gaemini-core/kb/adr.md`.
+Semantic. Breaking changes in a major bump. All consumers must bump together.
 
-Every persisted Redis JSON / JSONL record carries a top-level `schema_version: int`. Readers check it on the boundary and fail-fast on mismatch.
+Every JSONL record carries a top-level `schema_version: int`. Readers check
+it on the boundary and fail-fast on mismatch via `SchemaIncompatible`.

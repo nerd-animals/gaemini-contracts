@@ -1,42 +1,19 @@
-"""Public contracts surface for Gaemini cross-process boundaries.
+"""Public contracts surface for Gaemini cross-repo file boundaries.
 
-Re-exports the symbols consumers most commonly need. Sub-modules
-(`types`, `protocols`, `keys`, etc.) provide the full API.
+This package owns the file paths and JSONL/Parquet schemas that
+`gaemini-data`, `gaemini-core`, and `gaemini-view` all touch.
+
+Mutable live state (`AccountState`, `StrategySpec`, etc.) is owned by
+`gaemini-core` and exposed to `gaemini-view` via Core's HTTP API. Such
+state is no longer a cross-repo contract.
 """
 
-from gaemini_contracts.strategy.base import BaseStrategy
-from gaemini_contracts.types.account import AccountState, PositionData
-from gaemini_contracts.types.context import StrategyContext
-from gaemini_contracts.types.order import NetOrderData, OrderResultData
-from gaemini_contracts.types.output import (
-    OUTPUT_TYPE_NAMES,
-    AlphaScoreData,
-    ForecastData,
-    ForecastItemData,
-    OutputType,
-    SignalData,
-    SignalItem,
-    TargetDeltaData,
-    TargetPortfolioData,
-)
-from gaemini_contracts.types.spec import StrategyMeta, StrategySpec
+from gaemini_contracts.types.log_record import LOG_RECORD_VERSION, LogRecord
+from gaemini_contracts.types.trade_record import TRADE_RECORD_VERSION, TradeRecord
 
 __all__ = [
-    "BaseStrategy",
-    "AccountState",
-    "PositionData",
-    "StrategyContext",
-    "NetOrderData",
-    "OrderResultData",
-    "OUTPUT_TYPE_NAMES",
-    "AlphaScoreData",
-    "ForecastData",
-    "ForecastItemData",
-    "OutputType",
-    "SignalData",
-    "SignalItem",
-    "TargetDeltaData",
-    "TargetPortfolioData",
-    "StrategyMeta",
-    "StrategySpec",
+    "LOG_RECORD_VERSION",
+    "LogRecord",
+    "TRADE_RECORD_VERSION",
+    "TradeRecord",
 ]
