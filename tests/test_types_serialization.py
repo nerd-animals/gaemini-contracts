@@ -20,7 +20,6 @@ from gaemini_contracts.versioning import (
     parse_versioned_json,
 )
 
-
 # -- LogRecord -------------------------------------------------------------
 
 
