@@ -149,8 +149,29 @@ read with `pyarrow`).
 
 ## Versioning
 
-Semantic. Breaking changes (renamed/removed field, narrowed type, changed
-path layout) bump the major version; consumers must re-pin together.
+This package follows semantic versioning, but the rules are tighter than
+usual because every consumer must pin and re-pin in lockstep.
+
+### Bump policy
+
+**Patch** (`v0.2.0` → `v0.2.1`)
+- Documentation, comments, examples.
+- Internal refactors that do not change the public surface.
+- Bug fixes that do not change observable behavior at the contract boundary.
+
+**Minor** (`v0.2.0` → `v0.3.0`) — additive only, no consumer changes required
+- New record type, new path helper, new constant.
+- New *optional* field on an existing TypedDict (default-able, readers stay correct).
+- Loosened validation (a previously-rejected input becomes accepted).
+
+**Major** (`v0.2.0` → `v1.0.0`) — every consumer must update simultaneously
+- Renamed or removed field on any record type.
+- Type narrowed (e.g., `str` → `Literal[...]`).
+- Changed path layout (any segment renamed, reordered, or added).
+- Any `*_VERSION` constant incremented (record schema actually changed).
+- Tightened validation (a previously-accepted input now rejected).
+
+### Schema version (per record)
 
 Every JSONL record carries `schema_version: int` at the top level. The
 per-record `*_VERSION` constants in this package are the canonical
@@ -160,6 +181,16 @@ silent corruption is more dangerous than a loud failure.
 
 On `SchemaIncompatible` at runtime, the fix is to either bump the
 `gaemini-contracts` pin in the consumer, or migrate the on-disk data.
+
+### Practical guidance
+
+When extending a record type (e.g., adding a field to `TradeRecord`):
+prefer making the new field optional with a sensible default. That keeps
+the change *minor* — no `*_VERSION` bump, no consumer-side migration —
+so the three repos can update on their own schedule.
+
+Batch breaking changes. Group several breaking edits into one major bump
+rather than spreading them across consecutive majors.
 
 ## Layout
 
