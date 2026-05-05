@@ -18,11 +18,14 @@
     ticker   : 종목 식별자. 예) "KRW-BTC", "005930".
     market   : 시장 식별자. 예) "crypto", "krx".
 
-파티션 키 계산은 writer/reader 모두 다음 순서로 통일한다.
-    1) ``date`` 컬럼을 datetime으로 파싱.
-    2) naive timestamp(시간대 정보 없는 값)는 UTC로 본다.
-    3) Asia/Seoul로 변환.
-    4) ``%Y-%m-%d`` 포맷으로 파일명을 만든다.
+파티션 키 계약 (invariant)
+    - ``date`` 컬럼은 **항상 KST 로 해석되는 naive 문자열** 이다
+      (``YYYY-MM-DD`` 또는 ``YYYY-MM-DD HH:MM``).
+    - 파일명 날짜는 ``date`` 의 앞 10 글자를 그대로 사용한다.
+      별도 파싱·정규화·시간대 변환을 하지 않는다.
+    - tz-aware 값, UTC naive 값, 다른 포맷의 문자열은 컬럼에 들어가서는
+      안 된다 (writer 책임). 비-KST 소스는 writer 가 진입 시점에 KST 로
+      변환한 뒤 컬럼에 기록한다.
 
 예시 파일 (경로 helper는 ``keys/parquet_path.py``)
     ``/cache/crypto/KRW-BTC/2026-05-03.parquet``       — 일봉
@@ -56,11 +59,16 @@ pandas Timestamp가 아니라 문자열로 두는 이유:
 """
 
 PARTITION_TIMEZONE = "Asia/Seoul"
-"""KST (UTC+9). 파일 경계는 KST 자정 기준이지 UTC 자정이 아니다.
+"""디스크상 ``date`` 컬럼이 어느 시간대의 naive 시각인지 표시.
 
-이유: KRX와 한국 사용자의 거래일은 Asia/Seoul 기준이다.
-파일 ``2026-05-03.parquet``에는 UTC 날짜와 무관하게
-"KST 달력으로 2026-05-03인 모든 bar"가 들어간다.
+이 상수는 *변환 입력* 이 아니라 *해석 라벨* 이다. writer/reader 어느 쪽도
+``date`` 를 다시 파싱해서 UTC↔KST 변환을 수행하지 않는다. 이미 KST 로
+기록된 문자열을 그대로 KST 로 해석한다는 약속을 명시할 뿐이다.
+
+이유: KRX 와 한국 사용자의 거래일은 Asia/Seoul 기준이다. 1차 시장이
+한국 거래쌍 (예: ``KRW-BTC``) 이라 UTC 경유 단계는 잉여이며 양쪽 구현
+복제만 늘린다. 파일 ``2026-05-03.parquet`` 에는 "KST 달력으로
+2026-05-03 인 모든 bar" 가 들어간다.
 """
 
 PARTITION_GRANULARITY = "day"
