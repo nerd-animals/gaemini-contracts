@@ -27,7 +27,7 @@ Pin to a tag in your consumer's `pyproject.toml`:
 ```toml
 [project]
 dependencies = [
-    "gaemini-contracts @ git+https://github.com/nerd-animals/gaemini-contracts.git@v0.2.0",
+    "gaemini-contracts @ git+https://github.com/nerd-animals/gaemini-contracts.git@v0.3.0",
 ]
 ```
 

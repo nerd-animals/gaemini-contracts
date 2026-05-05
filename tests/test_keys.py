@@ -15,7 +15,6 @@ from gaemini_contracts.keys import (
 )
 from gaemini_contracts.naming import InvalidInstanceName
 
-
 # -- Parquet path -----------------------------------------------------------
 
 
