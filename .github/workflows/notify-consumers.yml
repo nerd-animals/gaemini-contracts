@@ -1,0 +1,57 @@
+name: notify-consumers
+
+# 새 버전 태그(v*)가 푸시되면 consumer repo (data, core, view) 에 자동으로
+# 패치노트 issue 를 만든다. body 는 태그 annotation 메시지를 그대로 쓰므로,
+# `git tag -a v0.5.0 -m "..."` 시점에 잘 적어두면 별도 작성 없이 끝난다.
+#
+# 사전 준비:
+#   secrets.CONSUMER_REPO_TOKEN = 세 consumer repo 에 issues:write 권한이 있는
+#   fine-grained PAT. (Settings → Secrets and variables → Actions → New)
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 태그 annotation 본문 읽기 위해 전체 히스토리 필요
+
+      - name: Build issue body
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          {
+            echo "\`gaemini-contracts\` 가 **${TAG}** 으로 업데이트되었습니다."
+            echo
+            echo "## 변경 요약"
+            echo
+            git tag -l --format='%(contents)' "$TAG"
+            echo
+            echo "## 체크리스트"
+            echo "- [ ] \`pyproject.toml\` 의 contracts pin 을 \`${TAG}\` 으로 갱신"
+            echo "- [ ] Breaking 변경이 있다면 producer/consumer 코드 반영"
+            echo "- [ ] \`schema_version\` bump 시 on-disk 데이터 마이그레이션 또는 cutoff 결정"
+            echo "- [ ] 테스트 통과 확인"
+            echo
+            echo "태그: https://github.com/${{ github.repository }}/releases/tag/${TAG}"
+          } > issue-body.md
+
+      - name: Create issue in each consumer repo
+        env:
+          GH_TOKEN: ${{ secrets.CONSUMER_REPO_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          TITLE="[contracts ${TAG}] 패치노트 — pin 갱신 필요"
+          for repo in nerd-animals/gaemini-data nerd-animals/gaemini-core nerd-animals/gaemini-view; do
+            echo "Creating issue in ${repo}"
+            gh issue create \
+              --repo "${repo}" \
+              --title "${TITLE}" \
+              --body-file issue-body.md
+          done
