@@ -39,6 +39,8 @@
 """
 from __future__ import annotations
 
+from gaemini_contracts.time import KST_TIMEZONE
+
 OHLCV_COLUMNS: tuple[str, ...] = (
     "date",     # str — 시각 (포맷은 아래 docstring 참조)
     "open",     # float — 구간 시가 (quote-asset 단위)
@@ -58,16 +60,16 @@ pandas Timestamp가 아니라 문자열로 두는 이유:
     - 스키마 버전이 바뀌어도 영향이 적다.
 """
 
-PARTITION_TIMEZONE = "Asia/Seoul"
+PARTITION_TIMEZONE = KST_TIMEZONE
 """디스크상 ``date`` 컬럼이 어느 시간대의 naive 시각인지 표시.
 
-이 상수는 *변환 입력* 이 아니라 *해석 라벨* 이다. writer/reader 어느 쪽도
-``date`` 를 다시 파싱해서 UTC↔KST 변환을 수행하지 않는다. 이미 KST 로
-기록된 문자열을 그대로 KST 로 해석한다는 약속을 명시할 뿐이다.
+OHLCV 전용 별칭이다 — 실제 값은 :data:`gaemini_contracts.time.KST_TIMEZONE`
+와 동일. contracts 전체가 단일 KST 가정 하에 동작하므로 (자세한 배경은
+:mod:`gaemini_contracts.time` 참조), 이 상수도 같은 곳을 가리킨다.
 
-이유: KRX 와 한국 사용자의 거래일은 Asia/Seoul 기준이다. 1차 시장이
-한국 거래쌍 (예: ``KRW-BTC``) 이라 UTC 경유 단계는 잉여이며 양쪽 구현
-복제만 늘린다. 파일 ``2026-05-03.parquet`` 에는 "KST 달력으로
+writer/reader 어느 쪽도 ``date`` 를 다시 파싱해서 UTC↔KST 변환을 수행하지
+않는다. 이미 KST 로 기록된 문자열을 그대로 KST 로 해석한다는 약속을
+명시할 뿐이다. 파일 ``2026-05-03.parquet`` 에는 "KST 달력으로
 2026-05-03 인 모든 bar" 가 들어간다.
 """
 

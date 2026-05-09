@@ -26,7 +26,7 @@ from gaemini_contracts.versioning import (
 def _sample_log() -> LogRecord:
     return LogRecord(
         schema_version=LOG_RECORD_VERSION,
-        ts="2026-05-03T08:00:00+00:00",
+        ts="2026-05-03 17:00:00.000000",
         level="INFO",
         source="strategy",
         tick_id="t-1",
@@ -56,7 +56,7 @@ def test_log_record_rejects_wrong_version() -> None:
 def _sample_trade() -> TradeRecord:
     return TradeRecord(
         schema_version=TRADE_RECORD_VERSION,
-        ts="2026-05-03T08:00:00+00:00",
+        ts="2026-05-03 17:00:00.000000",
         order_id="o-1",
         ticker="KRW-BTC",
         side="buy",

@@ -22,7 +22,7 @@
 
 예시 줄::
 
-    {"schema_version": 1, "ts": "2026-05-03T08:01:30+00:00",
+    {"schema_version": 2, "ts": "2026-05-03 17:01:30.000000",
      "level": "INFO", "source": "strategy", "tick_id": "t-42",
      "message": "ran momentum strategy",
      "extra": {"signals": 3, "elapsed_ms": 87}}
@@ -33,14 +33,18 @@ from typing import Any, TypedDict
 
 # LogRecord의 형태가 깨지는 변경(필드 이름 변경/제거, 타입 좁힘)이 있을 때마다
 # 1씩 올린다. 읽는 쪽은 schema_version이 이 값과 다르면 줄을 거부한다.
-LOG_RECORD_VERSION = 1
+#
+# v2: ``ts`` 가 UTC ISO 8601 (``...+00:00``) → KST naive (``KST_TIMESTAMP_FORMAT``)
+#     로 변경. contract 전체의 시간 표현을 KST 로 통일하기 위함이다 (자세한
+#     배경은 :mod:`gaemini_contracts.time` 참조).
+LOG_RECORD_VERSION = 2
 
 
 class LogRecord(TypedDict):
     schema_version: int
 
-    # 로그가 발생한 시각. UTC 기준 ISO 8601 문자열.
-    # 예) "2026-05-03T08:01:30+00:00"
+    # 로그가 발생한 시각. KST naive, ``KST_TIMESTAMP_FORMAT`` 포맷의 문자열.
+    # 예) "2026-05-03 17:01:30.000000"
     ts: str
 
     # 심각도. "DEBUG" / "INFO" / "WARNING" / "ERROR" 중 하나.

@@ -8,8 +8,14 @@ The package owns the **append-only file boundaries** between repos:
 - OHLCV Parquet column layout and KST partition policy
 - Application log (`LogRecord`) JSONL format and path
 - Trade log (`TradeRecord`) JSONL format and path
+- Order book snapshot (`OrderBookSnapshot`) Redis msgpack layout
 - Instance name validation
 - Schema-version fail-fast on JSON record boundaries
+
+All time fields are **KST (Asia/Seoul) naive strings** — UTC↔KST conversion
+happens once at the producer's entry point and never again. The canonical
+formats live in `gaemini_contracts.time` (`KST_TIMESTAMP_FORMAT`,
+`KST_DATE_FORMAT`, `KST_MINUTE_FORMAT`).
 
 It has **no runtime dependencies** (no `pandas`, no `redis`).
 
@@ -27,7 +33,7 @@ Pin to a tag in your consumer's `pyproject.toml`:
 ```toml
 [project]
 dependencies = [
-    "gaemini-contracts @ git+https://github.com/nerd-animals/gaemini-contracts.git@v0.3.0",
+    "gaemini-contracts @ git+https://github.com/nerd-animals/gaemini-contracts.git@v0.5.0",
 ]
 ```
 
@@ -70,11 +76,13 @@ def write_minute_bars(
 ### `gaemini-core` — writing trade and application logs
 
 ```python
-from datetime import date, datetime, timezone
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from gaemini_contracts.keys import log_path, trade_log_path
 from gaemini_contracts.naming import validate_instance_name
+from gaemini_contracts.time import KST_TIMESTAMP_FORMAT, KST_TIMEZONE
 from gaemini_contracts.types import (
     LOG_RECORD_VERSION, LogRecord,
     TRADE_RECORD_VERSION, TradeRecord,
@@ -93,7 +101,8 @@ def load_config(raw: dict) -> dict:
 def append_trade(
     log_root: Path, instance: str, strategy: str, trade: TradeRecord
 ) -> None:
-    day = datetime.fromisoformat(trade["ts"]).astimezone(timezone.utc).date()
+    # ts is KST naive — the trading-day partition is just its date part.
+    day = datetime.strptime(trade["ts"], KST_TIMESTAMP_FORMAT).date()
     path = trade_log_path(log_root, instance, strategy, day)
     path.parent.mkdir(parents=True, exist_ok=True)
     line = dump_versioned_json(dict(trade), TRADE_RECORD_VERSION, "TradeRecord")
@@ -103,7 +112,7 @@ def append_trade(
 def append_log(
     log_root: Path, instance: str, strategy: str, record: LogRecord
 ) -> None:
-    day = date.today()
+    day = datetime.now(ZoneInfo(KST_TIMEZONE)).date()
     path = log_path(log_root, instance, strategy, day)
     path.parent.mkdir(parents=True, exist_ok=True)
     line = dump_versioned_json(dict(record), LOG_RECORD_VERSION, "LogRecord")
@@ -198,8 +207,9 @@ rather than spreading them across consecutive majors.
 src/gaemini_contracts/
 ├── schema/      # OHLCV Parquet column schema + partition policy
 ├── keys/        # File path helpers (parquet, log, trade log)
-├── types/       # JSONL record schemas (LogRecord, TradeRecord)
+├── types/       # Record schemas (LogRecord, TradeRecord, OrderBookSnapshot)
 ├── naming/      # Instance name validation
+├── time.py      # KST timezone label + canonical time-string formats
 └── versioning/  # schema_version fail-fast helpers
 ```
 

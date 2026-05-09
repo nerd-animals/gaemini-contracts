@@ -34,7 +34,7 @@
 
 예시 줄::
 
-    {"schema_version": 1, "ts": "2026-05-03T08:01:31+00:00",
+    {"schema_version": 2, "ts": "2026-05-03 17:01:31.000000",
      "order_id": "o-42", "ticker": "KRW-BTC", "side": "buy",
      "filled_amount": 0.01, "filled_price": 50000000.0,
      "fee": 25.0, "status": "filled"}
@@ -45,14 +45,18 @@ from typing import Literal, TypedDict
 
 # TradeRecord 형태가 깨지는 변경이 있을 때마다 1씩 올린다.
 # 읽는 쪽은 schema_version이 이 값과 다르면 줄을 거부한다.
-TRADE_RECORD_VERSION = 1
+#
+# v2: ``ts`` 가 UTC ISO 8601 (``...+00:00``) → KST naive (``KST_TIMESTAMP_FORMAT``)
+#     로 변경. contract 전체의 시간 표현을 KST 로 통일하기 위함이다 (자세한
+#     배경은 :mod:`gaemini_contracts.time` 참조).
+TRADE_RECORD_VERSION = 2
 
 
 class TradeRecord(TypedDict):
     schema_version: int
 
-    # 거래소 응답 시각. UTC ISO 8601.
-    # 예) "2026-05-03T08:01:31+00:00"
+    # 거래소 응답 시각. KST naive, ``KST_TIMESTAMP_FORMAT`` 포맷의 문자열.
+    # 예) "2026-05-03 17:01:31.000000"
     ts: str
 
     # 거래소가 발급한 주문 ID. 거래소 안에서만 unique. 의미는 들여다보지 않는다.

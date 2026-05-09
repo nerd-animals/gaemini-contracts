@@ -22,7 +22,8 @@ LogRecord/TradeRecord 와의 차이
     선택*하지만, paper-live 일치성을 위해 ``received_at`` 기준 권장.
         exchange_timestamp — 거래소가 publish 한 시각 (시장 분석 용도)
         received_at        — gaemini-data 가 ws 로 받은 시각 (의사결정 용도)
-    둘 다 KST naive ``"YYYY-MM-DD HH:MM:SS.fff"`` 문자열.
+    둘 다 KST naive 문자열로 ``KST_TIMESTAMP_FORMAT`` 포맷
+    (자세한 약속은 :mod:`gaemini_contracts.time` 참조).
 
 gap 처리
     ``has_gap=True`` 는 직전 connection 이 끊긴 뒤 처음 받은 snapshot 을 의미.
@@ -81,11 +82,11 @@ class OrderBookSnapshot(TypedDict):
     # 종목 식별자. 거래소가 쓰는 형식 그대로. 예) "KRW-BTC".
     market: str
 
-    # 거래소가 publish 한 시각. KST naive "YYYY-MM-DD HH:MM:SS.fff".
-    # 거래소가 ms 미만 정밀도를 안 주면 ".000" 으로 채운다.
+    # 거래소가 publish 한 시각. KST naive, ``KST_TIMESTAMP_FORMAT`` 포맷.
+    # 거래소가 microsecond 미만 정밀도를 안 주면 부족한 자리는 0 으로 padded.
     exchange_timestamp: str
 
-    # gaemini-data 가 ws 로 받은 시각. KST naive "YYYY-MM-DD HH:MM:SS.fff".
+    # gaemini-data 가 ws 로 받은 시각. KST naive, ``KST_TIMESTAMP_FORMAT`` 포맷.
     # 의사결정 시각으로 권장 — paper-live 의 latency 모델이 일치하기 때문.
     received_at: str
 
