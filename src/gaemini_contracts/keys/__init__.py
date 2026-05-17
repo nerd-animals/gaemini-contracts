@@ -5,9 +5,18 @@
 
 커버 범위
     OHLCV Parquet     — ``parquet_path``, ``parquet_market_dir``, ``parquet_ticker_dir``
+    이벤트 Parquet     — ``event_day_file``, ``event_fragment_dir``, ``event_symbol_dir``
     애플리케이션 로그  — ``log_path``, ``log_instance_dir``, ``log_strategy_dir``
     거래 이력         — ``trade_log_path``, ``trades_dir``
 """
+from gaemini_contracts.keys.event_parquet_path import (
+    EVENT_FRAGMENT_GLOB,
+    InvalidEventKind,
+    event_day_file,
+    event_fragment_dir,
+    event_symbol_dir,
+    validate_event_kind,
+)
 from gaemini_contracts.keys.log_path import (
     log_instance_dir,
     log_path,
@@ -24,6 +33,12 @@ from gaemini_contracts.keys.trade_log_path import (
 )
 
 __all__ = [
+    "EVENT_FRAGMENT_GLOB",
+    "InvalidEventKind",
+    "event_day_file",
+    "event_fragment_dir",
+    "event_symbol_dir",
+    "validate_event_kind",
     "log_path",
     "log_instance_dir",
     "log_strategy_dir",
