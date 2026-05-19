@@ -11,6 +11,7 @@ from gaemini_contracts.keys import (
     event_symbol_dir,
     validate_event_kind,
 )
+from gaemini_contracts.schema import EVENT_KINDS
 
 DAY = date(2026, 5, 17)
 
@@ -46,7 +47,7 @@ def test_unknown_kind_rejected() -> None:
 
 
 def test_validate_event_kind_accepts_all_known() -> None:
-    for kind in ("trade", "orderbook", "ticker", "funding", "open_interest"):
+    for kind in EVENT_KINDS:
         validate_event_kind(kind)  # no raise
 
 

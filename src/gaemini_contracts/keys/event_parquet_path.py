@@ -1,7 +1,7 @@
 """이벤트 Parquet 파일의 경로 레이아웃.
 
 OHLCV 경로(:mod:`gaemini_contracts.keys.parquet_path`)와 별개인, 고빈도
-이벤트 데이터(체결·호가·티커·펀딩·OI)의 경로 단일 진실 공급원.
+이벤트 데이터(체결·호가·티커·펀딩·OI·거시 관측)의 경로 단일 진실 공급원.
 컬럼/dtype 스키마는 :mod:`gaemini_contracts.schema.event` 참조.
 
 생산자 (Producer)
@@ -34,8 +34,10 @@ OHLCV 경로(:mod:`gaemini_contracts.keys.parquet_path`)와 별개인, 고빈도
 
 용어
     kind     : 이벤트 종류 (단수). :data:`EVENT_KINDS` 중 하나.
-    exchange : 거래소 식별자. 소문자. 예) "upbit", "binance".
-    symbol   : 거래소 원형 심볼. 예) "KRW-BTC", "BTCUSDT".
+    exchange : 거래소 식별자. 소문자. 예) "upbit", "binance". 거래소가 아닌
+               데이터 소스(거시 제공처)는 소스 id — 예) "fred", "bok".
+    symbol   : 거래소 원형 심볼. 예) "KRW-BTC", "BTCUSDT". 거시는 소스
+               시리즈 ID — 예) "DGS10".
 
 예시
     >>> event_day_file(Path("/data"), "trade", "upbit", "KRW-BTC",
