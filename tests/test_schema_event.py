@@ -17,6 +17,7 @@ def test_event_kinds_are_singular() -> None:
         "ticker",
         "funding",
         "open_interest",
+        "macro_obs",
     )
 
 
@@ -72,6 +73,20 @@ def test_trade_dtypes() -> None:
         "trade_volume": "float32",
         "sequential_id": "int64",
     }
+
+
+def test_macro_obs_schema() -> None:
+    """거시 관측 kind: 조인키 선두 + observation_date/value, value=float64."""
+    m = EVENT_SCHEMAS["macro_obs"]
+    assert m.columns == (
+        "exchange",
+        "symbol",
+        "exchange_timestamp",
+        "observation_date",
+        "value",
+    )
+    assert m.columns[: len(EVENT_JOIN_KEY)] == EVENT_JOIN_KEY
+    assert m.dtypes == {"value": "float64"}
 
 
 def test_schema_version_is_int() -> None:
