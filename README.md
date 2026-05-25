@@ -34,7 +34,7 @@ Pin to a tag in your consumer's `pyproject.toml`:
 ```toml
 [project]
 dependencies = [
-    "gaemini-contracts @ git+https://github.com/nerd-animals/gaemini-contracts.git@v0.8.0",
+    "gaemini-contracts @ git+https://github.com/nerd-animals/gaemini-contracts.git@v1.0.0",
 ]
 ```
 

@@ -8,7 +8,6 @@ from gaemini_contracts.keys import (
     command_log_path,
     command_logs_dir,
     log_instance_dir,
-    log_path,
     log_strategy_dir,
     parquet_market_dir,
     parquet_path,
@@ -49,11 +48,6 @@ def test_parquet_path_validates_segments() -> None:
 # -- Log path ---------------------------------------------------------------
 
 
-def test_log_path_legacy_layout() -> None:
-    p = log_path(Path("/var/log/gaemini"), "paper", "momentum", date(2026, 5, 3))
-    assert p == Path("/var/log/gaemini/paper/momentum/2026-05-03.jsonl")
-
-
 def test_explicit_log_paths() -> None:
     root = Path("/var/log/gaemini")
     day = date(2026, 5, 3)
@@ -78,12 +72,14 @@ def test_log_dirs() -> None:
     )
 
 
-def test_log_path_validates_instance() -> None:
+def test_explicit_log_paths_validate_instance() -> None:
     with pytest.raises(InvalidInstanceName):
-        log_path(Path("/var/log"), "Bad", "x", date(2026, 5, 3))
+        system_log_path(Path("/var/log"), "Bad", date(2026, 5, 3))
+    with pytest.raises(InvalidInstanceName):
+        strategy_log_path(Path("/var/log"), "Bad", "x", date(2026, 5, 3))
 
 
-def test_log_path_validates_strategy() -> None:
+def test_strategy_log_path_validates_strategy() -> None:
     with pytest.raises(InvalidStrategyId):
         strategy_log_path(Path("/var/log"), "paper", "../x", date(2026, 5, 3))
 
