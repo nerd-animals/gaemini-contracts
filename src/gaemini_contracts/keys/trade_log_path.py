@@ -33,6 +33,7 @@ from datetime import date as Date
 from pathlib import Path
 
 from gaemini_contracts.naming.instance import validate_instance_name
+from gaemini_contracts.naming.path_segment import validate_strategy_id
 
 
 def trade_log_path(
@@ -43,10 +44,12 @@ def trade_log_path(
 ) -> Path:
     """(instance, strategy, day) 조합의 일자별 거래 이력 JSONL 경로."""
     validate_instance_name(instance)
+    validate_strategy_id(strategy)
     return log_root / instance / strategy / "trades" / f"{day.isoformat()}.jsonl"
 
 
 def trades_dir(log_root: Path, instance: str, strategy: str) -> Path:
     """한 (instance, strategy)의 모든 일자별 거래 이력 파일이 모이는 디렉토리."""
     validate_instance_name(instance)
+    validate_strategy_id(strategy)
     return log_root / instance / strategy / "trades"

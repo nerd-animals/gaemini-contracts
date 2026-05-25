@@ -26,6 +26,8 @@ from __future__ import annotations
 from datetime import date as Date
 from pathlib import Path
 
+from gaemini_contracts.naming.path_segment import validate_path_segment
+
 
 def parquet_path(
     cache_dir: Path,
@@ -34,15 +36,20 @@ def parquet_path(
     day: Date,
 ) -> Path:
     """(market, ticker, day) 조합 한 건의 Parquet 파일 경로."""
+    validate_path_segment(market, "market")
+    validate_path_segment(ticker, "ticker")
     return cache_dir / market / ticker / f"{day.isoformat()}.parquet"
 
 
 def parquet_market_dir(cache_dir: Path, market: str) -> Path:
     """한 시장의 모든 종목이 모이는 디렉토리. 예) ``/cache/crypto``."""
+    validate_path_segment(market, "market")
     return cache_dir / market
 
 
 def parquet_ticker_dir(cache_dir: Path, market: str, ticker: str) -> Path:
     """한 종목의 모든 일자별 파일이 모이는 디렉토리.
     예) ``/cache/crypto/KRW-BTC``."""
+    validate_path_segment(market, "market")
+    validate_path_segment(ticker, "ticker")
     return cache_dir / market / ticker

@@ -11,9 +11,21 @@ from gaemini_contracts.naming.instance import (
     InvalidInstanceName,
     validate_instance_name,
 )
+from gaemini_contracts.naming.path_segment import (
+    STRATEGY_ID_PATTERN,
+    InvalidPathSegment,
+    InvalidStrategyId,
+    validate_path_segment,
+    validate_strategy_id,
+)
 
 __all__ = [
     "INSTANCE_NAME_PATTERN",
+    "STRATEGY_ID_PATTERN",
     "InvalidInstanceName",
+    "InvalidPathSegment",
+    "InvalidStrategyId",
     "validate_instance_name",
+    "validate_path_segment",
+    "validate_strategy_id",
 ]

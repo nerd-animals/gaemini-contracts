@@ -47,8 +47,10 @@ OHLCV 경로(:mod:`gaemini_contracts.keys.parquet_path`)와 별개인, 고빈도
 from __future__ import annotations
 
 from datetime import date as Date
+from datetime import timedelta
 from pathlib import Path
 
+from gaemini_contracts.naming.path_segment import validate_path_segment
 from gaemini_contracts.schema.event import EVENT_KINDS
 
 EVENT_FRAGMENT_GLOB = "part-*.parquet"
@@ -86,6 +88,8 @@ def event_symbol_dir(
     예) ``/data/trade/upbit/KRW-BTC``.
     """
     validate_event_kind(kind)
+    validate_path_segment(exchange, "exchange")
+    validate_path_segment(symbol, "symbol")
     return base / kind / exchange / symbol
 
 
@@ -116,3 +120,81 @@ def event_fragment_dir(
     예) ``/data/trade/upbit/KRW-BTC/2026-05-17/``.
     """
     return event_symbol_dir(base, kind, exchange, symbol) / day.isoformat()
+
+
+def event_partition_paths(
+    base: Path,
+    kind: str,
+    exchange: str,
+    symbol: str,
+    start: Date | None = None,
+    end: Date | None = None,
+) -> list[Path]:
+    """읽어야 할 event Parquet path 를 날짜순으로 반환한다.
+
+    한 날짜에 ``YYYY-MM-DD.parquet`` 완본이 있으면 그 파일만 반환하고,
+    같은 날짜의 fragment directory 는 무시한다. 완본이 없으면
+    ``YYYY-MM-DD/part-*.parquet`` 조각을 파일명순으로 반환한다.
+
+    ``start``/``end`` 는 inclusive 이다. 둘 다 없으면 symbol directory 에서
+    발견되는 날짜를 스캔한다.
+    """
+    if start is not None and end is not None and start > end:
+        raise ValueError(
+            f"start must be <= end, got {start.isoformat()} > {end.isoformat()}"
+        )
+
+    days = _event_partition_days(base, kind, exchange, symbol, start, end)
+    paths: list[Path] = []
+    for day in days:
+        day_file = event_day_file(base, kind, exchange, symbol, day)
+        if day_file.is_file():
+            paths.append(day_file)
+            continue
+
+        fragment_dir = event_fragment_dir(base, kind, exchange, symbol, day)
+        if fragment_dir.is_dir():
+            paths.extend(
+                sorted(p for p in fragment_dir.glob(EVENT_FRAGMENT_GLOB) if p.is_file())
+            )
+    return paths
+
+
+def _event_partition_days(
+    base: Path,
+    kind: str,
+    exchange: str,
+    symbol: str,
+    start: Date | None,
+    end: Date | None,
+) -> list[Date]:
+    if start is not None and end is not None:
+        return [start + timedelta(days=i) for i in range((end - start).days + 1)]
+
+    symbol_dir = event_symbol_dir(base, kind, exchange, symbol)
+    discovered: set[Date] = set()
+    if symbol_dir.is_dir():
+        for child in symbol_dir.iterdir():
+            day = _date_from_partition_name(child)
+            if day is None:
+                continue
+            if start is not None and day < start:
+                continue
+            if end is not None and day > end:
+                continue
+            discovered.add(day)
+    return sorted(discovered)
+
+
+def _date_from_partition_name(path: Path) -> Date | None:
+    if path.is_file() and path.suffix == ".parquet":
+        name = path.stem
+    elif path.is_dir():
+        name = path.name
+    else:
+        return None
+
+    try:
+        return Date.fromisoformat(name)
+    except ValueError:
+        return None

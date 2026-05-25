@@ -6,11 +6,15 @@ parse_versioned_json 같은 helper 가 끼지 않는다 — 그래서 versioning
 """
 from __future__ import annotations
 
+import pytest
+
 from gaemini_contracts.types import (
     ORDER_BOOK_SNAPSHOT_VERSION,
     OrderBookLevel,
     OrderBookSnapshot,
+    validate_orderbook_snapshot,
 )
+from gaemini_contracts.versioning import SchemaIncompatible
 
 
 def _sample_snapshot(
@@ -63,6 +67,25 @@ def test_snapshot_required_fields() -> None:
         "previous_received_at",
     }
     assert set(snap.keys()) == expected_keys
+
+
+def test_validate_orderbook_snapshot_accepts_unpacked_mapping() -> None:
+    snap = _sample_snapshot()
+    assert validate_orderbook_snapshot(snap) == snap
+
+
+def test_validate_orderbook_snapshot_rejects_wrong_version() -> None:
+    snap = dict(_sample_snapshot())
+    snap["schema_version"] = 999
+    with pytest.raises(SchemaIncompatible):
+        validate_orderbook_snapshot(snap)
+
+
+def test_validate_orderbook_snapshot_rejects_missing_required_field() -> None:
+    snap = dict(_sample_snapshot())
+    snap.pop("bids")
+    with pytest.raises(SchemaIncompatible):
+        validate_orderbook_snapshot(snap)
 
 
 def test_snapshot_has_gap_false_uses_none_previous() -> None:

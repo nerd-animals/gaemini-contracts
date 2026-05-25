@@ -2,8 +2,13 @@ import pytest
 
 from gaemini_contracts.naming import (
     INSTANCE_NAME_PATTERN,
+    STRATEGY_ID_PATTERN,
     InvalidInstanceName,
+    InvalidPathSegment,
+    InvalidStrategyId,
     validate_instance_name,
+    validate_path_segment,
+    validate_strategy_id,
 )
 
 
@@ -52,3 +57,33 @@ def test_non_string() -> None:
 def test_pattern_exposed() -> None:
     assert INSTANCE_NAME_PATTERN.fullmatch("paper-1")
     assert not INSTANCE_NAME_PATTERN.fullmatch("Paper")
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["upbit", "KRW-BTC", "BTCUSDT", "005930", "fred:DGS10"],
+)
+def test_valid_path_segments(value: str) -> None:
+    validate_path_segment(value, "symbol")
+
+
+@pytest.mark.parametrize("value", ["", ".", "..", "KRW/BTC", "bad\0x", "bad\\x"])
+def test_invalid_path_segments(value: str) -> None:
+    with pytest.raises(InvalidPathSegment):
+        validate_path_segment(value, "symbol")
+
+
+@pytest.mark.parametrize("strategy_id", ["momentum", "momentum-1", "a"])
+def test_valid_strategy_ids(strategy_id: str) -> None:
+    validate_strategy_id(strategy_id)
+
+
+@pytest.mark.parametrize("strategy_id", ["", "Momentum", "1momentum", "a_b", "../x"])
+def test_invalid_strategy_ids(strategy_id: str) -> None:
+    with pytest.raises(InvalidStrategyId):
+        validate_strategy_id(strategy_id)
+
+
+def test_strategy_pattern_exposed() -> None:
+    assert STRATEGY_ID_PATTERN.fullmatch("momentum-1")
+    assert not STRATEGY_ID_PATTERN.fullmatch("Momentum")

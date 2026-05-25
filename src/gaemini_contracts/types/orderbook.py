@@ -55,7 +55,10 @@ gap 처리
 """
 from __future__ import annotations
 
-from typing import TypedDict
+from collections.abc import Mapping
+from typing import Any, TypedDict, cast
+
+from gaemini_contracts.versioning import SchemaIncompatible, validate_versioned_mapping
 
 # OrderBookSnapshot 의 형태가 깨지는 변경(필드 이름 변경/제거, 타입 좁힘)이
 # 있을 때마다 1씩 올린다. producer 와 consumer 의 contracts 버전이 다르면
@@ -106,3 +109,34 @@ class OrderBookSnapshot(TypedDict):
     # has_gap=True 일 때, 직전 정상 snapshot 의 received_at.
     # gap 길이 계산 또는 로깅 용도. has_gap=False 면 None.
     previous_received_at: str | None
+
+
+_REQUIRED_FIELDS: frozenset[str] = frozenset(
+    {
+        "schema_version",
+        "exchange",
+        "market",
+        "exchange_timestamp",
+        "received_at",
+        "depth",
+        "bids",
+        "asks",
+        "has_gap",
+        "previous_received_at",
+    }
+)
+
+
+def validate_orderbook_snapshot(payload: Mapping[str, Any]) -> OrderBookSnapshot:
+    """msgpack unpack 이후 OrderBookSnapshot mapping 을 fail-fast 검증한다."""
+    validate_versioned_mapping(
+        payload,
+        ORDER_BOOK_SNAPSHOT_VERSION,
+        "OrderBookSnapshot",
+    )
+    missing = sorted(_REQUIRED_FIELDS - payload.keys())
+    if missing:
+        raise SchemaIncompatible(
+            f"OrderBookSnapshot missing required field(s): {', '.join(missing)}"
+        )
+    return cast(OrderBookSnapshot, payload)

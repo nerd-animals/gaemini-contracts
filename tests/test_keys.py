@@ -4,16 +4,25 @@ from pathlib import Path
 import pytest
 
 from gaemini_contracts.keys import (
+    api_log_path,
+    command_log_path,
+    command_logs_dir,
     log_instance_dir,
     log_path,
     log_strategy_dir,
     parquet_market_dir,
     parquet_path,
     parquet_ticker_dir,
+    strategy_log_path,
+    system_log_path,
     trade_log_path,
     trades_dir,
 )
-from gaemini_contracts.naming import InvalidInstanceName
+from gaemini_contracts.naming import (
+    InvalidInstanceName,
+    InvalidPathSegment,
+    InvalidStrategyId,
+)
 
 # -- Parquet path -----------------------------------------------------------
 
@@ -30,12 +39,34 @@ def test_parquet_dirs() -> None:
     )
 
 
+def test_parquet_path_validates_segments() -> None:
+    with pytest.raises(InvalidPathSegment):
+        parquet_path(Path("/cache"), "../crypto", "BTC", date(2026, 5, 3))
+    with pytest.raises(InvalidPathSegment):
+        parquet_path(Path("/cache"), "crypto", "KRW/BTC", date(2026, 5, 3))
+
+
 # -- Log path ---------------------------------------------------------------
 
 
-def test_log_path() -> None:
+def test_log_path_legacy_layout() -> None:
     p = log_path(Path("/var/log/gaemini"), "paper", "momentum", date(2026, 5, 3))
     assert p == Path("/var/log/gaemini/paper/momentum/2026-05-03.jsonl")
+
+
+def test_explicit_log_paths() -> None:
+    root = Path("/var/log/gaemini")
+    day = date(2026, 5, 3)
+
+    assert api_log_path(root, day) == Path(
+        "/var/log/gaemini/_api/logs/2026-05-03.jsonl"
+    )
+    assert system_log_path(root, "paper", day) == Path(
+        "/var/log/gaemini/paper/logs/2026-05-03.jsonl"
+    )
+    assert strategy_log_path(root, "paper", "momentum", day) == Path(
+        "/var/log/gaemini/paper/momentum/logs/2026-05-03.jsonl"
+    )
 
 
 def test_log_dirs() -> None:
@@ -50,6 +81,30 @@ def test_log_dirs() -> None:
 def test_log_path_validates_instance() -> None:
     with pytest.raises(InvalidInstanceName):
         log_path(Path("/var/log"), "Bad", "x", date(2026, 5, 3))
+
+
+def test_log_path_validates_strategy() -> None:
+    with pytest.raises(InvalidStrategyId):
+        strategy_log_path(Path("/var/log"), "paper", "../x", date(2026, 5, 3))
+
+
+# -- Command log path -------------------------------------------------------
+
+
+def test_command_log_path() -> None:
+    p = command_log_path(Path("/var/log/gaemini"), "paper", date(2026, 5, 3))
+    assert p == Path("/var/log/gaemini/paper/commands/2026-05-03.jsonl")
+
+
+def test_command_logs_dir() -> None:
+    assert command_logs_dir(Path("/var/log/gaemini"), "paper") == Path(
+        "/var/log/gaemini/paper/commands"
+    )
+
+
+def test_command_log_path_validates_instance() -> None:
+    with pytest.raises(InvalidInstanceName):
+        command_log_path(Path("/var/log"), "Bad", date(2026, 5, 3))
 
 
 # -- Trade log path ---------------------------------------------------------
