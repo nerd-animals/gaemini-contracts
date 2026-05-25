@@ -25,7 +25,6 @@ from gaemini_contracts.keys.event_parquet_path import (
 from gaemini_contracts.keys.log_path import (
     api_log_path,
     log_instance_dir,
-    log_path,
     log_strategy_dir,
     strategy_log_path,
     system_log_path,
@@ -51,7 +50,6 @@ __all__ = [
     "event_partition_paths",
     "event_symbol_dir",
     "validate_event_kind",
-    "log_path",
     "log_instance_dir",
     "log_strategy_dir",
     "strategy_log_path",

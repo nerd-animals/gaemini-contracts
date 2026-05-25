@@ -55,22 +55,6 @@ def strategy_log_path(
     return log_root / instance / strategy / "logs" / f"{day.isoformat()}.jsonl"
 
 
-def log_path(
-    log_root: Path,
-    instance: str,
-    strategy: str,
-    day: Date,
-) -> Path:
-    """Legacy strategy 로그 경로.
-
-    새 consumer 는 ambiguous 한 이 helper 대신 :func:`strategy_log_path` 를 쓴다.
-    기존 JSONL 파일 위치와 consumer 호환을 위해 이 함수는 예전 layout 을 유지한다.
-    """
-    validate_instance_name(instance)
-    validate_strategy_id(strategy)
-    return log_root / instance / strategy / f"{day.isoformat()}.jsonl"
-
-
 def log_instance_dir(log_root: Path, instance: str) -> Path:
     """한 instance에 속한 모든 strategy 디렉토리의 부모."""
     validate_instance_name(instance)
@@ -78,8 +62,7 @@ def log_instance_dir(log_root: Path, instance: str) -> Path:
 
 
 def log_strategy_dir(log_root: Path, instance: str, strategy: str) -> Path:
-    """한 (instance, strategy)의 일자별 로그 파일과 ``trades/`` 서브디렉토리가
-    모이는 디렉토리."""
+    """한 strategy 아래 ``logs/``, ``trades/`` 등이 모이는 부모 디렉토리."""
     validate_instance_name(instance)
     validate_strategy_id(strategy)
     return log_root / instance / strategy
