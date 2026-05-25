@@ -10,10 +10,12 @@ from gaemini_contracts.versioning.validators import (
     SchemaIncompatible,
     dump_versioned_json,
     parse_versioned_json,
+    validate_versioned_mapping,
 )
 
 __all__ = [
     "SchemaIncompatible",
     "dump_versioned_json",
     "parse_versioned_json",
+    "validate_versioned_mapping",
 ]

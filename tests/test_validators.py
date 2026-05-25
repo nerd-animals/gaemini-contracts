@@ -6,6 +6,7 @@ from gaemini_contracts.versioning import (
     SchemaIncompatible,
     dump_versioned_json,
     parse_versioned_json,
+    validate_versioned_mapping,
 )
 
 
@@ -53,3 +54,25 @@ def test_dump_rejects_wrong_version() -> None:
 def test_dump_rejects_missing_version() -> None:
     with pytest.raises(SchemaIncompatible):
         dump_versioned_json({"x": 42}, expected_version=1, schema_name="Foo")
+
+
+def test_validate_versioned_mapping_accepts_expected_version() -> None:
+    validate_versioned_mapping(
+        {"schema_version": 1, "x": 42},
+        expected_version=1,
+        schema_name="Foo",
+    )
+
+
+def test_validate_versioned_mapping_rejects_non_mapping() -> None:
+    with pytest.raises(SchemaIncompatible):
+        validate_versioned_mapping([1, 2, 3], expected_version=1, schema_name="Foo")
+
+
+def test_validate_versioned_mapping_rejects_wrong_version() -> None:
+    with pytest.raises(SchemaIncompatible):
+        validate_versioned_mapping(
+            {"schema_version": 2},
+            expected_version=1,
+            schema_name="Foo",
+        )

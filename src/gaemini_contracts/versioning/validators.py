@@ -38,6 +38,7 @@ versioning을 도입할 때 이 모듈을 건드릴 필요가 없도록 했다.
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from typing import Any
 
 
@@ -63,6 +64,24 @@ def parse_versioned_json(
         raise SchemaIncompatible(
             f"{schema_name} payload is not a JSON object: {type(payload).__name__}"
         )
+    validate_versioned_mapping(payload, expected_version, schema_name)
+    return payload
+
+
+def validate_versioned_mapping(
+    payload: object,
+    expected_version: int,
+    schema_name: str,
+) -> None:
+    """mapping payload 의 ``schema_version`` 이 기대값과 같은지 확인한다.
+
+    JSONL 이 아닌 Redis msgpack 같은 boundary 에서는 consumer 가 먼저 unpack 한
+    뒤 이 helper 로 version 만 fail-fast 검증한다.
+    """
+    if not isinstance(payload, Mapping):
+        raise SchemaIncompatible(
+            f"{schema_name} payload is not a mapping: {type(payload).__name__}"
+        )
     actual = payload.get("schema_version")
     if actual != expected_version:
         raise SchemaIncompatible(
@@ -70,7 +89,6 @@ def parse_versioned_json(
             f"got {actual!r}, expected {expected_version}. "
             "Bump gaemini-contracts in this consumer or migrate the data."
         )
-    return payload
 
 
 def dump_versioned_json(

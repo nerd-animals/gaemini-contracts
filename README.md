@@ -8,9 +8,10 @@ The package owns the **append-only file boundaries** between repos:
 - OHLCV Parquet column layout and KST partition policy
 - Application log (`LogRecord`) JSONL format and path
 - Trade log (`TradeRecord`) JSONL format and path
+- Command audit (`CommandRecord`) JSONL format and path
 - Order book snapshot (`OrderBookSnapshot`) Redis msgpack layout
-- Instance name validation
-- Schema-version fail-fast on JSON record boundaries
+- Path-facing identifier validation
+- Schema-version fail-fast on JSON and mapping boundaries
 
 All time fields are **KST (Asia/Seoul) naive strings** — UTC↔KST conversion
 happens once at the producer's entry point and never again. The canonical
@@ -33,7 +34,7 @@ Pin to a tag in your consumer's `pyproject.toml`:
 ```toml
 [project]
 dependencies = [
-    "gaemini-contracts @ git+https://github.com/nerd-animals/gaemini-contracts.git@v0.5.0",
+    "gaemini-contracts @ git+https://github.com/nerd-animals/gaemini-contracts.git@v0.8.0",
 ]
 ```
 
@@ -80,20 +81,18 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from gaemini_contracts.keys import log_path, trade_log_path
+from gaemini_contracts.keys import strategy_log_path, trade_log_path
 from gaemini_contracts.naming import validate_instance_name
 from gaemini_contracts.time import KST_TIMESTAMP_FORMAT, KST_TIMEZONE
 from gaemini_contracts.types import (
-    LOG_RECORD_VERSION, LogRecord,
-    TRADE_RECORD_VERSION, TradeRecord,
+    LogRecord, TradeRecord,
+    dump_log_record, dump_trade_record,
 )
-from gaemini_contracts.versioning import dump_versioned_json
 
-# Path helpers (log_path, trade_log_path, ...) validate the instance name
-# internally, so a bad name can never produce a file path. Calling
-# validate_instance_name once at config load is still useful: it fails
-# fast at startup with a clear "your config is wrong" message, instead of
-# crashing on the first log write much later.
+# Path helpers validate instance/strategy/path segments internally, so a bad
+# name can never produce a file path. Calling validate_instance_name once at
+# config load is still useful: it fails fast at startup with a clear
+# "your config is wrong" message, instead of crashing on the first log write.
 def load_config(raw: dict) -> dict:
     validate_instance_name(raw["instance"])  # raises InvalidInstanceName on bad name
     return raw
@@ -105,7 +104,7 @@ def append_trade(
     day = datetime.strptime(trade["ts"], KST_TIMESTAMP_FORMAT).date()
     path = trade_log_path(log_root, instance, strategy, day)
     path.parent.mkdir(parents=True, exist_ok=True)
-    line = dump_versioned_json(dict(trade), TRADE_RECORD_VERSION, "TradeRecord")
+    line = dump_trade_record(trade)
     with path.open("a", encoding="utf-8") as f:
         f.write(line + "\n")
 
@@ -113,9 +112,9 @@ def append_log(
     log_root: Path, instance: str, strategy: str, record: LogRecord
 ) -> None:
     day = datetime.now(ZoneInfo(KST_TIMEZONE)).date()
-    path = log_path(log_root, instance, strategy, day)
+    path = strategy_log_path(log_root, instance, strategy, day)
     path.parent.mkdir(parents=True, exist_ok=True)
-    line = dump_versioned_json(dict(record), LOG_RECORD_VERSION, "LogRecord")
+    line = dump_log_record(record)
     with path.open("a", encoding="utf-8") as f:
         f.write(line + "\n")
 ```
@@ -127,8 +126,8 @@ from datetime import date
 from pathlib import Path
 
 from gaemini_contracts.keys import trade_log_path
-from gaemini_contracts.types import TRADE_RECORD_VERSION, TradeRecord
-from gaemini_contracts.versioning import parse_versioned_json, SchemaIncompatible
+from gaemini_contracts.types import TradeRecord, parse_trade_record
+from gaemini_contracts.versioning import SchemaIncompatible
 
 def load_trades(
     log_root: Path, instance: str, strategy: str, day: date
@@ -144,7 +143,7 @@ def load_trades(
             if not line:
                 continue
             try:
-                record = parse_versioned_json(line, TRADE_RECORD_VERSION, "TradeRecord")
+                record = parse_trade_record(line)
             except SchemaIncompatible:
                 # Either bump gaemini-contracts in this consumer, or migrate the file.
                 raise
@@ -152,8 +151,9 @@ def load_trades(
     return out
 ```
 
-The same pattern applies to `LogRecord` (use `log_path` and
-`LOG_RECORD_VERSION`) and to `OHLCV` Parquet (use `parquet_path` and
+The same pattern applies to `LogRecord` (use `strategy_log_path` and
+`parse_log_record`), `CommandRecord` (use `command_log_path` and
+`parse_command_record`), and to `OHLCV` Parquet (use `parquet_path` and
 read with `pyarrow`).
 
 ## Versioning
@@ -206,9 +206,9 @@ rather than spreading them across consecutive majors.
 ```
 src/gaemini_contracts/
 ├── schema/      # OHLCV Parquet column schema + partition policy
-├── keys/        # File path helpers (parquet, log, trade log)
-├── types/       # Record schemas (LogRecord, TradeRecord, OrderBookSnapshot)
-├── naming/      # Instance name validation
+├── keys/        # File path helpers and event Parquet read planning
+├── types/       # Record schemas for JSONL and Redis/msgpack boundaries
+├── naming/      # Instance name and path segment validation
 ├── time.py      # KST timezone label + canonical time-string formats
 └── versioning/  # schema_version fail-fast helpers
 ```

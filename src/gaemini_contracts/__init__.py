@@ -16,15 +16,37 @@
                   파일을 시계열 로그처럼 다루는 데 적합.
 """
 
-from gaemini_contracts.types.log_record import LOG_RECORD_VERSION, LogRecord
+from gaemini_contracts.types.command_record import (
+    COMMAND_RECORD_VERSION,
+    CommandRecord,
+    dump_command_record,
+    parse_command_record,
+)
+from gaemini_contracts.types.json_value import JsonScalar, JsonValue
+from gaemini_contracts.types.log_record import (
+    LOG_RECORD_VERSION,
+    LogRecord,
+    dump_log_record,
+    parse_log_record,
+)
 from gaemini_contracts.types.orderbook import (
     ORDER_BOOK_SNAPSHOT_VERSION,
     OrderBookLevel,
     OrderBookSnapshot,
+    validate_orderbook_snapshot,
 )
-from gaemini_contracts.types.trade_record import TRADE_RECORD_VERSION, TradeRecord
+from gaemini_contracts.types.trade_record import (
+    TRADE_RECORD_VERSION,
+    TradeRecord,
+    dump_trade_record,
+    parse_trade_record,
+)
 
 __all__ = [
+    "COMMAND_RECORD_VERSION",
+    "CommandRecord",
+    "JsonScalar",
+    "JsonValue",
     "LOG_RECORD_VERSION",
     "LogRecord",
     "ORDER_BOOK_SNAPSHOT_VERSION",
@@ -32,4 +54,11 @@ __all__ = [
     "OrderBookSnapshot",
     "TRADE_RECORD_VERSION",
     "TradeRecord",
+    "dump_command_record",
+    "dump_log_record",
+    "dump_trade_record",
+    "parse_command_record",
+    "parse_log_record",
+    "parse_trade_record",
+    "validate_orderbook_snapshot",
 ]

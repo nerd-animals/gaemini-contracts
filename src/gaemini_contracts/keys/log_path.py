@@ -7,12 +7,14 @@
     gaemini-view (로그 화면).
 
 표준 레이아웃
-    ``{log_root}/{instance}/{strategy}/{date}.jsonl``
+    API 로그      ``{log_root}/_api/logs/{date}.jsonl``
+    system 로그   ``{log_root}/{instance}/logs/{date}.jsonl``
+    strategy 로그 ``{log_root}/{instance}/{strategy}/logs/{date}.jsonl``
 
 예시
-    >>> log_path(Path("/var/log/gaemini"), "paper-crypto", "momentum",
+    >>> strategy_log_path(Path("/var/log/gaemini"), "paper-crypto", "momentum",
     ...          date(2026, 5, 3))
-    PosixPath('/var/log/gaemini/paper-crypto/momentum/2026-05-03.jsonl')
+    PosixPath('/var/log/gaemini/paper-crypto/momentum/logs/2026-05-03.jsonl')
 
 ``instance`` 인자는 ``naming/instance.py``의 규칙으로 검증된다.
 잘못된 이름이면 경로 생성 전에 ``InvalidInstanceName``이 발생한다.
@@ -27,6 +29,30 @@ from datetime import date as Date
 from pathlib import Path
 
 from gaemini_contracts.naming.instance import validate_instance_name
+from gaemini_contracts.naming.path_segment import validate_strategy_id
+
+
+def api_log_path(log_root: Path, day: Date) -> Path:
+    """Core API 프로세스의 일자별 JSONL 로그 파일 경로."""
+    return log_root / "_api" / "logs" / f"{day.isoformat()}.jsonl"
+
+
+def system_log_path(log_root: Path, instance: str, day: Date) -> Path:
+    """한 instance 의 system 레벨 일자별 JSONL 로그 파일 경로."""
+    validate_instance_name(instance)
+    return log_root / instance / "logs" / f"{day.isoformat()}.jsonl"
+
+
+def strategy_log_path(
+    log_root: Path,
+    instance: str,
+    strategy: str,
+    day: Date,
+) -> Path:
+    """한 strategy 의 일자별 JSONL 로그 파일 경로."""
+    validate_instance_name(instance)
+    validate_strategy_id(strategy)
+    return log_root / instance / strategy / "logs" / f"{day.isoformat()}.jsonl"
 
 
 def log_path(
@@ -35,8 +61,13 @@ def log_path(
     strategy: str,
     day: Date,
 ) -> Path:
-    """(instance, strategy, day) 조합의 일자별 JSONL 로그 파일 경로."""
+    """Legacy strategy 로그 경로.
+
+    새 consumer 는 ambiguous 한 이 helper 대신 :func:`strategy_log_path` 를 쓴다.
+    기존 JSONL 파일 위치와 consumer 호환을 위해 이 함수는 예전 layout 을 유지한다.
+    """
     validate_instance_name(instance)
+    validate_strategy_id(strategy)
     return log_root / instance / strategy / f"{day.isoformat()}.jsonl"
 
 
@@ -50,4 +81,5 @@ def log_strategy_dir(log_root: Path, instance: str, strategy: str) -> Path:
     """한 (instance, strategy)의 일자별 로그 파일과 ``trades/`` 서브디렉토리가
     모이는 디렉토리."""
     validate_instance_name(instance)
+    validate_strategy_id(strategy)
     return log_root / instance / strategy
